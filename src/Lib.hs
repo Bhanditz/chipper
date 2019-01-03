@@ -62,11 +62,11 @@ ws :: () = [ ] { () }
 bracketed :: Text
   = '(' [^)\n\r]+ ')' { pack $1 }
 
-instrheader :: [Int] = ws+ ('|' [-]+)+ '|' { map length $2 }
+instrheader :: [Int] = ws+ ('|' [-]+)+ '|' { map (\x -> 1 + (length x)) $2 }
 
 bit :: Bool = '1' { True } / '0' { False }
 
-instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) + (length $3)) ($2) }) / (ws* [a-zA-Z] [a-zA-Z0-9]* ws* { PatternVariable' ((length $1) + (1) + (length $3) + (length $4)) (pack ($2:$3)) })
+instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) + (length $3) + 1) ($2) }) / (ws* [a-zA-Z] [a-zA-Z0-9]* ws* { PatternVariable' ((length $1) + (1) + (length $3) + (length $4) + 1) (pack ($2:$3)) })
 
 bitsheader :: BitOrder = ws+ ('|' ws* [0-9a-fA-F]+ ws* { fst (head (readHex $2)) } )+ '|' { $2 }
 

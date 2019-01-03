@@ -1,7 +1,7 @@
 {-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable, LambdaCase #-}
 
 module Lib
-    ( someFunc
+    ( someFunc, encoding, Encoding(..)
     ) where
 
 import Text.Peggy
@@ -10,7 +10,7 @@ import Data.Maybe (fromMaybe)
 import Data.Data
 import Data.Typeable
 import Numeric (readHex)
-
+import System.IO
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -23,12 +23,12 @@ type Bits = [Int] -- list of which bits make up a part - length bits gets you th
 type Name = Text
 type Mnemonic = Text
 
-data Part' = PatternLiteral' Int [Bool] | PatternVariable' Int Name
-data Part  = PatternLiteral Bits [Bool] | PatternVariable Bits Name
+data Part' = PatternLiteral' Int [Bool] | PatternVariable' Int Name deriving (Show, Data, Eq, Typeable)
+data Part  = PatternLiteral Bits [Bool] | PatternVariable Bits Name deriving (Show, Data, Eq, Typeable)
 
-data Instruction = Instruction Mnemonic BitOrder [Part]
+data Instruction = Instruction Mnemonic BitOrder [Part] deriving (Show, Data, Eq, Typeable)
 
-data Encoding = Encoding (Maybe Name) [Instruction]
+data Encoding = Encoding (Maybe Name) [Instruction] deriving (Show, Data, Eq, Typeable)
 
 -- Rep functions
 
@@ -57,26 +57,26 @@ instructifier lengths bitorder name segments = if (and $ map (== head lengths) (
 
 nl :: () = [\r]? [\n] { () }
 
-ws :: () = " " { () }
+ws :: () = [ ] { () }
 
 bracketed :: Text
-  = "(" [^)\n\r]+ ")" { pack $1 }
+  = '(' [^)\n\r]+ ')' { pack $1 }
 
-instrheader :: [Int] = ws+ ("|" [^|\n\r]+)+ "|" { map length $2 }
+instrheader :: [Int] = ws+ ('|' [-]+)+ '|' { map length $2 }
 
-bit :: Bool = "1" { True } / "0" { False }
+bit :: Bool = '1' { True } / '0' { False }
 
 instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) + (length $3)) ($2) }) / (ws* [a-zA-Z] [a-zA-Z0-9]* ws* { PatternVariable' ((length $1) + (1) + (length $3) + (length $4)) (pack ($2:$3)) })
 
-bitsheader :: BitOrder = ws+ ("|" ws* [0-9a-fA-F]+ ws* { fst (head (readHex $2)) } )+ "|" { $2 }
+bitsheader :: BitOrder = ws+ ('|' ws* [0-9a-fA-F]+ ws* { fst (head (readHex $2)) } )+ '|' { $2 }
 
-instr :: Instruction = instrheader nl bitsheader nl (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ("|" instrpart { $1 })+ "|" nl { instructifier ($1:$5) $3 (pack $7) $9 }
+instr :: Instruction = instrheader nl bitsheader nl (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ('|' instrpart { $1 })+ '|' nl instrheader nl { instructifier ($1:$5) $3 (pack $7) $9 }
 
 bracketedEncoding :: Encoding
-  = "Encoding" ws+ bracketed ":" nl instr+  { Encoding (Just $2) $4 }
+  = 'Encoding' ws+ bracketed ':' nl instr+ nl { Encoding (Just $2) $4 }
 
 unbracketedEncoding :: Encoding
-  = "Encoding:" ws* nl instr+ { Encoding Nothing $3 }
+  = 'Encoding:' ws* nl instr+ nl { Encoding Nothing $3 }
 
 encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))

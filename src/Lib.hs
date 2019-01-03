@@ -9,12 +9,15 @@ import Data.Text (Text, pack, unlines)
 import Data.Maybe (fromMaybe)
 import Data.Data
 import Data.Typeable
+import Numeric (readHex)
 
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
 
 -- Instructions
+
+type BitOrder = [Int]
 
 type Bits = Int
 type Name = Text
@@ -23,7 +26,7 @@ type Mnemonic = Text
 data Part' = PatternLiteral' Int [Bool] | PatternVariable' Int Name
 data Part  = PatternLiteral Bits [Bool] | PatternVariable Bits Name
 
-data Instruction = Instruction Mnemonic [Part]
+data Instruction = Instruction Mnemonic BitOrder [Part]
 
 data Encoding = Encoding (Maybe Name) [Instruction]
 
@@ -35,14 +38,14 @@ data Signature = Signature [Term] Term
 
 data Rep = Rep Name Signature
 
-instructifier :: [[Int]] -> Text -> [Part'] -> Instruction
-instructifier lengths name segments = if (and $ map (== head lengths) (lengths))
+instructifier :: [[Int]] -> BitOrder -> Text -> [Part'] -> Instruction
+instructifier lengths bitorder name segments = if (and $ map (== head lengths) (lengths))
                                       then let
-                                        cumulativesegs = scanl (+) 0 (head lengths)
-                                        cumulativestarts = scanl (+) 0 (map (\case
+                                        cumulativesegs = zip [0..] (scanl (+) 0 (head lengths))
+                                        cumulativeends = scanl (+) 0 (map (\case
                                           PatternLiteral'  x _ -> x
                                           PatternVariable' x _ -> x) segments)
-                                        parts = undefined in Instruction name parts
+                                        parts = undefined in Instruction name bitorder parts
                                       else undefined -- Blow up here
 
 [peggy|
@@ -60,7 +63,9 @@ bit :: Bool = "1" { True } / "0" { False }
 
 instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) + (length $3)) ($2) }) / (ws* [a-zA-Z] [a-zA-Z0-9]* ws* { PatternVariable' ((length $1) + (1) + (length $3) + (length $4)) (pack ($2:$3)) })
 
-instr :: Instruction = (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ("|" instrpart { $1 })+ "|" nl { instructifier $1 (pack $3) $5 }
+bitsheader :: BitOrder = ws+ ("|" ws* [0-9a-fA-F]+ ws* { fst (head (readHex $2)) } )+ "|" { $2 }
+
+instr :: Instruction = instrheader nl bitsheader nl (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ("|" instrpart { $1 })+ "|" nl { instructifier ($1:$5) $3 (pack $7) $9 }
 
 bracketedEncoding :: Encoding
   = "Encoding" ws+ bracketed ":" nl instr+  { Encoding (Just $2) $4 }

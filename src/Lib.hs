@@ -20,7 +20,8 @@ type Bits = Int
 type Name = Text
 type Mnemonic = Text
 
-data Part = PatternLiteral Bits [Bool] | PatternVariable Bits Name
+data Part' = PatternLiteral' Int [Bool] | PatternVariable' Int Name
+data Part  = PatternLiteral Bits [Bool] | PatternVariable Bits Name
 
 data Instruction = Instruction Mnemonic [Part]
 
@@ -34,7 +35,10 @@ data Signature = Signature [Term] Term
 
 data Rep = Rep Name Signature
 
-instructifier = undefined
+instructifier :: [[Int]] -> Text -> [Part'] -> Instruction
+instructifier lengths name segments = if (and $ map (== head lengths) (lengths))
+                                      then undefined
+                                      else undefined
 
 [peggy|
 
@@ -47,7 +51,11 @@ bracketed :: Text
 
 instrheader :: [Int] = ws+ ("|" [^|\n\r]+)+ "|" { map length $2 }
 
-instr :: Instruction = (instrheader nl)+ ws+ [^ \n\r]+ ws ("|" [^|\n\r]+)+ "|" nl { instructifier $1 $3 $5 }
+bit :: Bool = "1" { True } / "0" { False }
+
+instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) + (length $3)) ($2) }) / (ws* [a-zA-Z] [a-zA-Z0-9]* ws* { PatternVariable' ((length $1) + (1) + (length $3) + (length $4)) (pack ($2:$3)) })
+
+instr :: Instruction = (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ("|" instrpart { $1 })+ "|" nl { instructifier $1 (pack $3) $5 }
 
 bracketedEncoding :: Encoding
   = "Encoding" ws+ bracketed ":" nl instr+  { Encoding (Just $2) $4 }

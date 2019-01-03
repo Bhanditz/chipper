@@ -19,7 +19,7 @@ someFunc = putStrLn "someFunc"
 
 type BitOrder = [Int]
 
-type Bits = Int
+type Bits = [Int] -- list of which bits make up a part - length bits gets you the number of bits
 type Name = Text
 type Mnemonic = Text
 
@@ -41,11 +41,16 @@ data Rep = Rep Name Signature
 instructifier :: [[Int]] -> BitOrder -> Text -> [Part'] -> Instruction
 instructifier lengths bitorder name segments = if (and $ map (== head lengths) (lengths))
                                       then let
-                                        cumulativesegs = zip [0..] (scanl (+) 0 (head lengths))
-                                        cumulativeends = scanl (+) 0 (map (\case
+                                        cumulativeheads = (scanl (+) 0 (head lengths))
+                                        headedges       = zip [0..] (zip (0:(map (+1) cumulativeheads)) cumulativeheads)
+                                        cumulativepats = scanl (+) 0 (map (\case
                                           PatternLiteral'  x _ -> x
                                           PatternVariable' x _ -> x) segments)
-                                        parts = undefined in Instruction name bitorder parts
+                                        patedges = zip (0:(map (+1) cumulativepats)) cumulativepats
+                                        partsbits = map (\x -> map (\y -> bitorder !! (fst y)) (filter (\y -> ((fst x) <= (fst (snd y))) && ((snd x) >= (snd (snd y)))) headedges)) patedges
+                                        parts = map (\case
+                                          (b, PatternLiteral'  _ x) -> PatternLiteral  b x
+                                          (b, PatternVariable' _ x) -> PatternVariable b x) (zip partsbits segments) in Instruction name bitorder parts
                                       else undefined -- Blow up here
 
 [peggy|

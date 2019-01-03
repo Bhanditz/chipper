@@ -1,4 +1,4 @@
-{-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable #-}
+{-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable, LambdaCase #-}
 
 module Lib
     ( someFunc
@@ -37,8 +37,13 @@ data Rep = Rep Name Signature
 
 instructifier :: [[Int]] -> Text -> [Part'] -> Instruction
 instructifier lengths name segments = if (and $ map (== head lengths) (lengths))
-                                      then undefined
-                                      else undefined
+                                      then let
+                                        cumulativesegs = scanl (+) 0 (head lengths)
+                                        cumulativestarts = scanl (+) 0 (map (\case
+                                          PatternLiteral'  x _ -> x
+                                          PatternVariable' x _ -> x) segments)
+                                        parts = undefined in Instruction name parts
+                                      else undefined -- Blow up here
 
 [peggy|
 

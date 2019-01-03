@@ -70,13 +70,13 @@ instrpart :: Part' = (ws* bit+ ws* { PatternLiteral' ((length $1) + (length $2) 
 
 bitsheader :: BitOrder = ws+ ('|' ws* [0-9a-fA-F]+ ws* { fst (head (readHex $2)) } )+ '|' { $2 }
 
-instr :: Instruction = instrheader nl bitsheader nl (instrheader nl { $1 })+ ws+ [^ \n\r]+ ws ('|' instrpart { $1 })+ '|' nl instrheader nl { instructifier ($1:$5) $3 (pack $7) $9 }
+instr :: [Instruction] = instrheader nl bitsheader nl instrheader nl (ws+ [^ \n\r]+ ws ('|' instrpart { $1 })+ '|' nl instrheader nl { ($2, $4) })+ { map (\x -> instructifier ($1:[$5]) $3 (pack (fst x)) (snd x)) $7 }
 
 bracketedEncoding :: Encoding
-  = 'Encoding' ws+ bracketed ':' nl instr+ nl { Encoding (Just $2) $4 }
+  = 'Encoding' ws+ bracketed ':' nl instr nl { Encoding (Just $2) $4 }
 
 unbracketedEncoding :: Encoding
-  = 'Encoding:' ws* nl instr+ nl { Encoding Nothing $3 }
+  = 'Encoding:' ws* nl instr nl { Encoding Nothing $3 }
 
 encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))

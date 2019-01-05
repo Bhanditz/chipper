@@ -1,7 +1,7 @@
 {-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable, LambdaCase #-}
 
 module Lib
-    ( someFunc, encoding, Encoding(..)
+    ( someFunc, encoding, Encoding(..), oppage, OpPage(..)
     ) where
 
 import Text.Peggy
@@ -11,6 +11,7 @@ import Data.Data
 import Data.Typeable
 import Numeric (readHex)
 import System.IO
+import Data.Monoid (mconcat)
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -29,6 +30,12 @@ data Part  = PatternLiteral Bits [Bool] | PatternVariable Bits Name deriving (Sh
 data Instruction = Instruction Mnemonic BitOrder [Part] deriving (Show, Data, Eq, Typeable)
 
 data Encoding = Encoding (Maybe Name) [Instruction] deriving (Show, Data, Eq, Typeable)
+
+type Purpose = Text
+type Restrictions = Text
+type Operation = Text
+
+data OpPage = OpPage [Encoding] Purpose Restrictions Operation deriving (Show, Data, Eq, Typeable)
 
 -- Rep functions
 
@@ -78,7 +85,15 @@ bracketedEncoding :: Encoding
 unbracketedEncoding :: Encoding
   = 'Encoding:' ws* nl instr nl { Encoding Nothing $3 }
 
+purpose :: Purpose = 'Purpose:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat $2 }
+
+restrictions :: Restrictions = 'Restrictions:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat $2 }
+
+operation :: Operation = 'Operation:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat $2 }
+
 encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))
+
+oppage :: OpPage = encoding purpose restrictions operation nl { OpPage $1 $2 $3 $4 }
 
 |]

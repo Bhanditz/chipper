@@ -1,7 +1,7 @@
 {-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable, LambdaCase #-}
 
 module Lib
-    ( someFunc, encoding, Encoding(..), oppage, OpPage(..)
+    ( someFunc, encoding, Encoding(..), oppage, OpPage(..), instructionlist,
     ) where
 
 import Text.Peggy
@@ -36,6 +36,8 @@ type Restrictions = Text
 type Operation = Text
 
 data OpPage = OpPage [Encoding] Purpose Restrictions Operation deriving (Show, Data, Eq, Typeable)
+
+type InstructionList = [OpPage]
 
 -- Rep functions
 
@@ -95,5 +97,7 @@ encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))
 
 oppage :: OpPage = encoding purpose restrictions operation nl { OpPage $1 $2 $3 $4 }
+
+instructionlist :: InstructionList = 'List of Instructions:' nl nl oppage+ { $3 }
 
 |]

@@ -41,13 +41,13 @@ data Rep = Rep Name Signature
 instructifier :: [[Int]] -> BitOrder -> Text -> [Part'] -> Instruction
 instructifier lengths bitorder name segments = if (and $ map (== head lengths) (lengths))
                                       then let
-                                        cumulativeheads = (scanl (+) 0 (head lengths))
-                                        headedges       = zip [0..] (zip (0:(map (+1) cumulativeheads)) cumulativeheads)
-                                        cumulativepats = scanl (+) 0 (map (\case
+                                        cumulativeheads = tail (scanl (+) 0 (head lengths))
+                                        headedges       = zip [0..] (zip (0:(map (\n -> n - 1) cumulativeheads)) cumulativeheads)
+                                        cumulativepats = tail $ scanl (+) 0 (map (\case
                                           PatternLiteral'  x _ -> x
                                           PatternVariable' x _ -> x) segments)
-                                        patedges = zip (0:(map (+1) cumulativepats)) cumulativepats
-                                        partsbits = map (\x -> map (\y -> bitorder !! (fst y)) (filter (\y -> ((fst x) <= (fst (snd y))) && ((snd x) >= (snd (snd y)))) headedges)) patedges
+                                        patedges = zip (0:(map (\n -> n - 1) cumulativepats)) cumulativepats
+                                        partsbits = map (\(startpat, endpat) -> map (\y -> bitorder !! (fst y)) (filter (\(_, (startbit, endbit)) -> (startpat <= startbit) && (endpat >= endbit)) headedges)) patedges
                                         parts = map (\case
                                           (b, PatternLiteral'  _ x) -> PatternLiteral  b x
                                           (b, PatternVariable' _ x) -> PatternVariable b x) (zip partsbits segments) in Instruction name bitorder parts

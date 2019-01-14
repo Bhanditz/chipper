@@ -35,7 +35,7 @@ type Purpose = Text
 type Restrictions = Text
 type Operation = Text
 
-data OpPage = OpPage [Encoding] Purpose Restrictions Operation deriving (Show, Data, Eq, Typeable)
+data OpPage = OpPage Name [Encoding] Purpose Restrictions Operation deriving (Show, Data, Eq, Typeable)
 
 type InstructionList = [OpPage]
 
@@ -96,7 +96,10 @@ operation :: Operation = 'Operation:' nl (ws ws [^\n\r]+ nl { pack ($3 ++ "\n") 
 encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))
 
-oppage :: OpPage = encoding purpose restrictions operation nl { OpPage $1 $2 $3 $4 }
+opname :: Name
+  = 'Op: ' [a-zA-Z0-9]+ nl+ { pack $1 }
+
+oppage :: OpPage = opname encoding purpose restrictions operation nl { OpPage $1 $2 $3 $4 $5 }
 
 instructionlist :: InstructionList = 'List of Instructions:' nl nl oppage+ { $3 }
 

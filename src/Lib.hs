@@ -1,8 +1,8 @@
 {-# Language TemplateHaskell, QuasiQuotes, FlexibleContexts, DeriveDataTypeable, LambdaCase #-}
 
-module Lib
-    ( someFunc, encoding, Encoding(..), oppage, OpPage(..), instructionlist,
-    ) where
+module Lib where
+    -- ( someFunc, encoding, Encoding(..), oppage, OpPage(..), instructionlist,
+    -- ) where
 
 import Text.Peggy
 import Data.Text (Text, pack, unlines)
@@ -91,7 +91,7 @@ purpose :: Purpose = 'Purpose:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat
 
 restrictions :: Restrictions = 'Restrictions:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat $2 }
 
-operation :: Operation = 'Operation:' nl (ws ws [^\n\r]+ nl { pack $3 })+ nl { mconcat $2 }
+operation :: Operation = 'Operation:' nl (ws ws [^\n\r]+ nl { pack ($3 ++ "\n") })+ nl { mconcat $2 }
 
 encoding :: [Encoding]
   = (bracketedEncoding+ / (unbracketedEncoding {[$1]}))

@@ -25,7 +25,6 @@ dependencies:
 - text >=0.11 && <2.0
 - optparse-applicative
 - shakespeare
-- monad-supply >= 0.6
 - mtl
 
 library:
@@ -52,3 +51,10 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - chipper
+    - HUnit
+    - test-framework
+    - test-framework-hunit
+    - peggy
+    - text >=0.11 && <2.0
+    - optparse-applicative
+
